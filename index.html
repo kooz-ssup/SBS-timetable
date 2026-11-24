@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>AIX 홍대 운영툴 · 시간표</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#fff; --line:#dfe2e8; --line2:#b9bfcb; --text:#1d2330; --muted:#6b7385;
+  --accent:#2f5bea; --accent-soft:#e8eefe; --bad:#d4380d; --bad-soft:#fff1ec; --ok:#2e7d32; --ok-soft:#edf7ee;
+  --cell:#f3f6fd;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+.muted{color:var(--muted)} .small{font-size:12px} .pad{padding:4px 0}
+.err{background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:8px 12px;margin:8px 0}
+.err ul{margin:4px 0 0;padding-left:18px}
+
+/* 상단 */
+.demobar{background:#fff8e1;border-bottom:1px solid #f0dc9a;padding:8px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:13px}
+.demobar select{margin-left:4px}
+.top{display:flex;align-items:center;gap:18px;padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-size:17px;letter-spacing:-.3px} .brand b{color:var(--accent)} .brand.big{font-size:26px;margin-bottom:6px}
+.month-pick{display:flex;gap:8px;align-items:center}
+.month-pick select{font-size:16px;font-weight:700;padding:6px 10px;border:1px solid var(--line2);border-radius:8px;background:#fff}
+.me{margin-left:auto;display:flex;gap:8px;align-items:center}
+.role{font-size:12px;padding:2px 8px;border-radius:20px;background:#eef0f4}
+.r-admin{background:#2f5bea;color:#fff} .r-editor{background:var(--accent-soft);color:var(--accent)} .r-viewer{background:#eef0f4;color:var(--muted)}
+.tabs{display:flex;gap:2px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{border:0;background:none;padding:12px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--text);font-weight:700;border-bottom-color:var(--accent)}
+main{padding:16px 20px 60px}
+
+/* 버튼 */
+.btn{border:1px solid var(--line2);background:#fff;padding:7px 14px;border-radius:8px;cursor:pointer}
+.btn:hover{background:#f6f7f9}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)} .btn.ghost:hover{background:#eef0f4}
+.btn.danger-btn{border-color:#f3b8a5;color:var(--bad);background:#fff}
+.link{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:inherit}
+.link.strong{font-weight:700;color:var(--text)} .link.strong:hover{color:var(--accent)}
+
+/* 툴바 */
+.toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:none;padding:6px 14px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--text);color:#fff}
+.hl select{margin-left:6px;padding:5px 8px;border:1px solid var(--line2);border-radius:8px}
+.hint{color:var(--muted);font-size:12px}
+.toolbar label.hl,.demobar label{display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:600}
+.toolbar label.hl select,.demobar label select{display:inline-block;width:auto;margin:0}
+.stat td:first-child{white-space:nowrap}
+.warnbox{background:var(--bad-soft);border:1px solid #f6cdbd;border-radius:10px;padding:8px 14px;margin-bottom:14px}
+.warnbox summary{cursor:pointer;font-weight:700;color:var(--bad)}
+.warnbox ul{margin:6px 0 2px;padding-left:18px;line-height:1.7}
+.okbox{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:13px}
+
+/* 시간표 표 */
+.gsec{margin-bottom:22px}
+.gsec h3{margin:0 0 8px;font-size:16px} .gsec h3 .muted{font-size:12px;font-weight:400;margin-left:6px}
+.grid-scroll{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+table.grid{border-collapse:collapse;min-width:100%;table-layout:fixed}
+.grid th,.grid td{border:1px solid var(--line);padding:0;text-align:center;vertical-align:middle}
+.grid thead th{background:#f7f8fa;font-weight:600;font-size:12px;padding:5px 2px;position:relative}
+.grid th.room{font-size:14px;font-weight:800;padding:7px 2px}
+.grid th.grp{color:var(--muted);font-weight:500;width:84px;min-width:84px}
+.grid .tcol{position:sticky;left:0;z-index:2;background:#f7f8fa;width:62px;min-width:62px;font-weight:700;font-size:13px}
+.grid tbody th.tcol{height:52px}
+.grid .rs{border-left:2px solid var(--line2)}
+.grid td.empty{background:#fff}
+.grid td.empty.can{cursor:pointer}
+.grid td.empty.can:hover{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.grid td.empty.can:hover::after{content:"+";color:var(--accent);font-weight:700}
+.grid td.cell{background:var(--cell);cursor:pointer;padding:4px 4px;line-height:1.25;word-break:keep-all}
+.grid td.cell:hover{box-shadow:inset 0 0 0 2px var(--accent)}
+.cell .subj{font-weight:700;font-size:13px}
+.cell .inst{font-size:12px;color:#3a4256;margin-top:2px}
+.cell .inst .none{color:var(--bad);font-weight:600}
+.cell .meta{font-size:11px;color:var(--muted);margin-top:1px}
+.c-yellow{background:#fff3a3 !important} .c-green{background:#cdf1cb !important} .c-red{background:#ffcfcf !important}
+.c-blue{background:#d4e5ff !important} .c-purple{background:#e7dbff !important} .c-gray{background:#e9ebef !important}
+.grid.has-hl td.cell{opacity:.28}
+.grid.has-hl td.cell.hl{opacity:1;box-shadow:inset 0 0 0 2px var(--accent);background:#dfe8ff !important}
+
+/* 집계 */
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:120px}
+.card .k{font-size:12px;color:var(--muted)} .card .v{font-size:20px;font-weight:800;margin-top:2px}
+.card.bad{border-color:#f6cdbd;background:var(--bad-soft)} .card.bad .v{color:var(--bad)}
+table.stat{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat th,.stat td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+.stat th{background:#f7f8fa;font-size:12px;color:var(--muted);font-weight:600}
+.stat .n{text-align:right;white-space:nowrap}
+.stat td.cls,.stat td.subjs{line-height:1.9}
+.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:12px;background:#eef0f4;margin:0 4px 2px 0;border:0}
+.chip.ghost{background:#fff;border:1px solid var(--line);cursor:pointer} .chip.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.chip.warn{background:var(--bad-soft);color:var(--bad);cursor:pointer}
+.chips{line-height:2}
+.tag.bad{font-size:11px;background:var(--bad);color:#fff;border-radius:4px;padding:0 5px}
+ul.plain{padding-left:18px;line-height:1.8}
+h4{margin:20px 0 8px}
+
+/* 설정·사용자 */
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.setbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.setbox h3{margin:0 0 10px}
+label{display:block;margin:10px 0;font-size:13px;font-weight:600}
+label small,.lbl small{font-weight:400;color:var(--muted)}
+.lbl{font-size:13px;font-weight:600;margin:12px 0 6px}
+label input:not([type=checkbox]):not([type=radio]),label select,label textarea{display:block;width:100%;margin-top:4px;padding:7px 10px;border:1px solid var(--line2);border-radius:8px;font-weight:400;background:#fff}
+label input:disabled,label select:disabled,label textarea:disabled{background:#f6f7f9;color:var(--text)}
+.grow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.grow input{padding:6px 8px;border:1px solid var(--line2);border-radius:8px}
+.grow .g-label{width:120px} .grow .g-days{width:64px}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.actions .left{margin-right:auto}
+.danger{margin-top:30px;border-top:1px dashed var(--line2);padding-top:10px}
+.adduser{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.adduser input,.adduser select{padding:7px 10px;border:1px solid var(--line2);border-radius:8px}
+.adduser #uEmail{min-width:260px}
+
+/* 팝업 */
+.overlay{position:fixed;inset:0;background:rgba(20,24,34,.38);display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px;z-index:50;overflow:auto}
+.modal{background:#fff;border-radius:14px;padding:18px 22px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 6px} .modal h3 .muted{font-size:13px;font-weight:400}
+.form2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.chk{display:flex;gap:6px;align-items:center;font-weight:400}
+.colors{display:flex;gap:6px;flex-wrap:wrap}
+.sw{margin:0;font-weight:400;cursor:pointer}
+.sw input{display:none}
+.sw span{display:inline-block;padding:4px 10px;border-radius:8px;border:1px solid var(--line);font-size:12px}
+.sw.c-none span{background:var(--cell)}
+.sw input:checked+span{outline:2px solid var(--accent);outline-offset:1px;font-weight:700}
+
+.center-card{max-width:440px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;text-align:center}
+.center-card.inline{margin:6vh auto}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1d2330;color:#fff;padding:10px 18px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media print{.demobar,.tabs,.toolbar,.warnbox,.okbox,.me,.month-pick button{display:none}.grid-scroll{overflow:visible;border:0}}
+</style>
+<script src="firebase-config.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<script src="app.js" defer></script>
+</body>
+</html>

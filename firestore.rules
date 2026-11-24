@@ -1,0 +1,41 @@
+rules_version = '2';
+// ============================================================
+// 접근 규칙 — Firebase 콘솔 → Firestore Database → '규칙' 탭에 통째로 붙여넣고 '게시'
+// 아래 OWNER 메일을 firebase-config.js의 ownerEmails와 똑같이 바꿔 주세요(소문자).
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isOwner() { return signedIn() && myEmail() in ['여기에-관리자-구글메일@gmail.com']; }
+    function registered() { return signedIn() && exists(/databases/$(database)/documents/users/$(myEmail())); }
+    function myRole() { return get(/databases/$(database)/documents/users/$(myEmail())).data.role; }
+
+    function canRead() { return isOwner() || (registered() && myRole() in ['viewer', 'editor', 'admin']); }
+    function canEdit() { return isOwner() || (registered() && myRole() in ['editor', 'admin']); }
+    function isAdmin() { return isOwner() || (registered() && myRole() == 'admin'); }
+
+    // 사용자 명단: 본인 것은 읽기 가능, 등록·수정·삭제는 관리자만
+    match /users/{email} {
+      allow read: if (signedIn() && myEmail() == email) || isAdmin();
+      allow write: if isAdmin()
+        && (request.resource == null || request.resource.data.role in ['viewer', 'editor', 'admin']);
+    }
+
+    // 월별 시간표(설정) + 수업 칸: 열람 권한 이상 읽기, 편집 권한 이상 쓰기
+    match /months/{ym} {
+      allow read: if canRead();
+      allow write: if canEdit();
+      match /cells/{cellId} {
+        allow read: if canRead();
+        allow write: if canEdit();
+      }
+    }
+
+    // 나중에 탭(기능)을 추가하면 여기에 규칙을 추가합니다. 그 외는 모두 차단.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
