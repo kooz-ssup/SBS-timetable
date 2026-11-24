@@ -360,9 +360,9 @@ function render() {
   }
   if (!S.role) {
     app.innerHTML = `<div class="center-card">
-      <h2>접근 권한이 없습니다</h2>
+      <h2>허가된 계정이 아닙니다</h2>
       <p>로그인한 계정: <b>${esc(S.user.email)}</b></p>
-      <p class="muted">관리자에게 이 메일 주소를 알려 주고 등록을 요청하세요. 등록 후 새로고침하면 열립니다.</p>
+      <p class="muted">이 계정은 사용 허가가 없습니다. 관리자에게 등록을 요청하거나 다른 계정으로 로그인하세요.</p>
       <button class="btn" data-act="signout">로그아웃</button></div>`;
     return;
   }
@@ -392,7 +392,7 @@ function render() {
 
 function demoBar() {
   return `<div class="demobar">
-    <b>데모 모드</b> Firebase 연결 전 미리보기입니다. 수정 내용은 이 브라우저에만 저장됩니다.
+    <b>데모 모드</b> Firebase 설정 전 미리보기입니다. 수정 내용은 이 브라우저에만 저장됩니다.
     <label>권한 미리보기 <select id="demoRole">${Object.entries(ROLE_LABEL).map(([k, v]) => `<option value="${k}" ${k === S.role ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     <button class="btn sm ghost" data-act="demoReset">예시 데이터로 초기화</button></div>`;
 }
