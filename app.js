@@ -422,7 +422,8 @@ function renderTimetable() {
       <div class="seg">${[['weekday', '평일'], ['weekend', '주말'], ['all', '전체']].map(([k, v]) => `<button class="${S.view === k ? 'on' : ''}" data-view="${k}">${v}</button>`).join('')}</div>
       <label class="hl">강사 강조
         <select id="hlSel"><option value="">— 선택 안 함 —</option>${names.map(n => `<option ${n === S.hl ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
-      <span class="hint">${canEdit() ? '빈 칸 클릭 = 수업 추가 · 수업 클릭 = 수정' : '수업을 클릭하면 상세가 보입니다'}</span>
+      <span class="hint">${canEdit() ? '빈 칸 클릭 = 추가 · 수업 클릭 = 수정 · 끌어서 빈 칸에 놓기 = 이동 · 다른 수업 위에 놓기 = 서로 교체' : '수업을 클릭하면 상세가 보입니다'}</span>
+      ${canEdit() && S.undo && S.undo.ym === S.ym ? `<button class="btn sm" data-act="undo">↶ 방금 ${S.undo.label} 되돌리기</button>` : ''}
     </div>
     ${warn.length ? `<details class="warnbox" open><summary>확인 필요 ${warn.length}건</summary><ul>${warn.join('')}</ul></details>` : `<div class="okbox">겹침·강사 중복 없음</div>`}
     ${secs.map(s => gridHTML(m, s, lays[s])).join('')}`;
@@ -446,7 +447,7 @@ function gridHTML(m, sec, L) {
           const c = a.c; const names = splitNames(c.instructor);
           const on = hl && names.includes(hl);
           const hrs = cellHours(c, st);
-          h += `<td class="cell c-${c.color || 'none'} ${j === 0 ? 'rs' : ''} ${on ? 'hl' : ''}" rowspan="${a.rs}" colspan="${a.cs}" data-open="${c.id}" title="${esc(describe(c, m))}${c.note ? '\n메모: ' + esc(c.note) : ''}">
+          h += `<td class="cell c-${c.color || 'none'} ${j === 0 ? 'rs' : ''} ${on ? 'hl' : ''}" rowspan="${a.rs}" colspan="${a.cs}" data-open="${c.id}" ${canEdit() ? 'draggable="true"' : ''} title="${esc(describe(c, m))}${c.note ? '\n메모: ' + esc(c.note) : ''}">
             <div class="subj">${esc(c.subject)}</div>
             <div class="inst">${c.instructor ? esc(c.instructor) : (c.noInstructor ? '' : '<span class="none">미배정</span>')}</div>
             ${hrs !== num(st.defaultHours) || c.note ? `<div class="meta">${hrs !== num(st.defaultHours) ? fmtH(hrs) + 'H' : ''}${c.note ? ' ✎' : ''}</div>` : ''}</td>`;
@@ -658,7 +659,7 @@ function checkCell(c) {
 // ============================================================
 function selectMonth(ym) {
   if (unsubs.month) { unsubs.month(); unsubs.month = null; }
-  S.ym = ym; S.month = null; S.confirmDelMonth = false;
+  S.ym = ym; S.month = null; S.confirmDelMonth = false; S.undo = null;
   if (ym) unsubs.month = store.watchMonth(ym, m => { if (S.ym !== ym) return; S.month = m; softRender(); });
   render();
 }
@@ -790,6 +791,12 @@ document.addEventListener('click', async ev => {
       break;
     }
     case 'csv': downloadCSV(); break;
+    case 'undo': {
+      const u = S.undo; if (!u) return; S.undo = null;
+      await run(async () => { for (const c of u.cells) await store.saveCell(u.ym, c); }, '되돌렸습니다');
+      render();
+      break;
+    }
   }
 });
 
@@ -805,6 +812,68 @@ document.addEventListener('change', ev => {
 });
 
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && S.modal) { S.modal = null; render(); } });
+
+// ---------- 드래그: 빈 칸에 놓으면 이동, 다른 수업 위에 놓으면 서로 교체 ----------
+const SWAP_FIELDS = ['subject', 'instructor', 'noInstructor', 'color', 'note'];
+let dragId = null;
+const dropTarget = el => el && el.closest && el.closest('td.cell[data-open], td.empty.can[data-new]');
+document.addEventListener('dragstart', ev => {
+  const td = ev.target.closest && ev.target.closest('td.cell[draggable="true"]');
+  if (!td || !canEdit()) return;
+  dragId = td.dataset.open;
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', dragId); } catch (e) { }
+  setTimeout(() => td.classList.add('dragging'), 0);
+});
+document.addEventListener('dragend', () => {
+  dragId = null;
+  document.querySelectorAll('.dragging,.drop-on').forEach(x => x.classList.remove('dragging', 'drop-on'));
+});
+document.addEventListener('dragover', ev => {
+  if (!dragId) return;
+  const t = dropTarget(ev.target);
+  if (!t || t.dataset.open === dragId) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.drop-on').forEach(x => x !== t && x.classList.remove('drop-on'));
+  t.classList.add('drop-on');
+});
+document.addEventListener('drop', async ev => {
+  if (!dragId) return;
+  const t = dropTarget(ev.target); const id = dragId;
+  ev.preventDefault();
+  document.querySelectorAll('.dragging,.drop-on').forEach(x => x.classList.remove('dragging', 'drop-on'));
+  dragId = null;
+  if (!t || !S.month) return;
+  const src = S.month.cells.find(c => c.id === id); if (!src) return;
+  const ym = S.ym;
+  const strip = c => { const n = clone(c); delete n.updatedBy; delete n.updatedAt; return n; };
+  if (t.dataset.open) {
+    // 교체: 두 수업의 내용(과목·강사·색·메모)을 맞바꿈, 칸 위치·크기는 그대로
+    const dst = S.month.cells.find(c => c.id === t.dataset.open); if (!dst || dst.id === src.id) return;
+    const a = strip(src), b = strip(dst);
+    SWAP_FIELDS.forEach(f => { const x = a[f]; a[f] = b[f]; b[f] = x; });
+    S.undo = { ym, label: '교체', cells: [strip(src), strip(dst)] };
+    await run(async () => { await store.saveCell(ym, a); await store.saveCell(ym, b); }, `교체했습니다: ${src.subject} ↔ ${dst.subject}`);
+    const warn = checkCell(a).concat(checkCell(b));
+    if (warn.length) setTimeout(() => toast('교체는 됐지만 확인 필요: ' + warn[0]), 2700);
+  } else {
+    // 이동: 빈 칸 위치로 옮김 (수업시간·요일 폭은 유지)
+    const [sec, room, col, start] = t.dataset.new.split('|');
+    if (sec !== src.section) { toast('평일 ↔ 주말 사이로는 옮길 수 없습니다'); return; }
+    const st = S.month.settings[sec];
+    const n = strip(src);
+    n.room = room; n.col = +col; n.start = start;
+    n.colSpan = Math.min(Math.max(1, n.colSpan | 0), st.dayGroups.length - n.col);
+    const L = layout({ settings: S.month.settings, cells: S.month.cells.filter(x => x.id !== n.id).concat([n]) }, sec);
+    if (L.overlaps.some(([x, y]) => x.id === n.id || y.id === n.id)) { toast('그 자리에 다른 수업과 겹쳐서 옮길 수 없습니다 (수업시간이 아래 칸까지 이어짐)'); return; }
+    S.undo = { ym, label: '이동', cells: [strip(src)] };
+    await run(() => store.saveCell(ym, n), `옮겼습니다: ${n.subject} → ${describe(n, S.month)}`);
+    const warn = checkCell(n);
+    if (warn.length) setTimeout(() => toast('옮겼지만 확인 필요: ' + warn[0]), 2700);
+  }
+  render();
+});
 
 // ============================================================
 // 시작

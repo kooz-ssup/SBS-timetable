@@ -85,6 +85,9 @@ table.grid{border-collapse:collapse;min-width:100%;table-layout:fixed}
 .cell .meta{font-size:11px;color:var(--muted);margin-top:1px}
 .c-yellow{background:#fff3a3 !important} .c-green{background:#cdf1cb !important} .c-red{background:#ffcfcf !important}
 .c-blue{background:#d4e5ff !important} .c-purple{background:#e7dbff !important} .c-gray{background:#e9ebef !important}
+.grid td.cell[draggable="true"]{cursor:grab}
+.grid td.cell.dragging{opacity:.35}
+.grid td.drop-on{box-shadow:inset 0 0 0 3px var(--accent) !important;background:var(--accent-soft) !important}
 .grid.has-hl td.cell{opacity:.28}
 .grid.has-hl td.cell.hl{opacity:1;box-shadow:inset 0 0 0 2px var(--accent);background:#dfe8ff !important}
 
