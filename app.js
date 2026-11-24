@@ -1,6 +1,6 @@
 'use strict';
 // ============================================================
-// AIX 홍대 운영툴 — 시간표 편성 + 강사 배정
+// 컴퓨터홍대 운영툴 — 시간표 편성 + 강사 배정
 // 구조: [데이터 저장소(Firebase 또는 데모)] → [화면 그리기] → [버튼 동작]
 // 새 기능은 아래 TABS 배열에 탭 하나를 추가하는 방식으로 늘려 갑니다.
 // ============================================================
@@ -353,7 +353,7 @@ function render() {
   if (S.loading) { app.innerHTML = `<div class="center-card"><p>불러오는 중…</p></div>`; return; }
   if (!S.user) {
     app.innerHTML = `<div class="center-card">
-      <div class="brand big">AIX 홍대 <b>운영툴</b></div>
+      <div class="brand big">컴퓨터홍대 <b>운영툴</b></div>
       <p class="muted">허용된 계정만 볼 수 있습니다.</p>
       <button class="btn primary" data-act="signin">Google 계정으로 로그인</button></div>`;
     return;
@@ -372,7 +372,7 @@ function render() {
   app.innerHTML = `
     ${store.demo ? demoBar() : ''}
     <header class="top">
-      <div class="brand">AIX 홍대 <b>운영툴</b></div>
+      <div class="brand">컴퓨터홍대 <b>운영툴</b></div>
       <div class="month-pick">
         <select id="monthSel" ${S.months.length ? '' : 'disabled'}>
           ${S.months.length ? S.months.slice().reverse().map(m => `<option value="${m}" ${m === S.ym ? 'selected' : ''}>${ymLabel(m)}</option>`).join('') : '<option>시간표 없음</option>'}
